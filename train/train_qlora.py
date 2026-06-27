@@ -1,13 +1,16 @@
 """Qwen3-8B QLoRA 파인튜닝 (4-bit NF4 + LoRA).
 
-GCP GPU VM(권장: L4 24GB / A100 40GB)에서 실행.
+Google Colab Pro(권장: L4 24GB / A100 40GB)에서 실행하도록 맞춰져 있다.
+기본값(8B + batch 2 + grad_accum 8 + seq_len 2048 + gradient checkpointing)은
+24GB↑ VRAM 한 장 기준이다. 무료 Colab의 T4 16GB에서 돌릴 경우
+--max-seq-len 1024 / --batch-size 1 로 낮춘다(T4는 bf16 미지원 → fp16 자동 사용).
 
   python train/preprocess.py
   python train/train_qlora.py \
       --train-file data/train.jsonl \
       --output-dir models/qwen3-8b-parts-lora
 
-검증 라이브러리: transformers==4.49.0, trl==0.29.0, peft==0.18.1, bitsandbytes==0.45.0
+검증 라이브러리: transformers==4.56.2, trl==0.29.0, peft==0.18.1, bitsandbytes==0.45.0
 """
 
 import argparse
@@ -28,6 +31,7 @@ def parse_args():
     ap.add_argument("--batch-size", type=int, default=2)
     ap.add_argument("--grad-accum", type=int, default=8)
     ap.add_argument("--lr", type=float, default=2e-4)
+    # L4/A100(24GB↑) 기준. T4 16GB면 1024로 낮춘다.
     ap.add_argument("--max-seq-len", type=int, default=2048)
     ap.add_argument("--lora-r", type=int, default=16)
     ap.add_argument("--lora-alpha", type=int, default=32)
@@ -45,7 +49,7 @@ def main():
     compute_dtype = torch.bfloat16 if use_bf16 else torch.float16
     print(f"compute dtype = {'bfloat16' if use_bf16 else 'float16'}")
 
-    # 4-bit NF4 양자화 (QLoRA의 핵심) — 8B 모델을 24GB GPU 한 장에 적재
+    # 4-bit NF4 양자화 (QLoRA의 핵심) — 8B 모델을 24GB GPU(Colab L4/A100) 한 장에 적재
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type="nf4",
@@ -87,8 +91,12 @@ def main():
         gradient_checkpointing_kwargs={"use_reentrant": False},
         logging_steps=10,
         save_strategy="epoch",
+        save_total_limit=2,          # Google Drive 용량 절약: 체크포인트 2개만 유지
         report_to="tensorboard",
-        # bitsandbytes 4-bit에 맞는 옵티마이저
+        # Colab은 vCPU가 적으므로(보통 2~8코어) 낮게 유지
+        dataloader_num_workers=2,
+        # bitsandbytes 4-bit에 맞는 옵티마이저. paged_*는 OOM 시 옵티마이저 상태를
+        # CPU RAM으로 페이징해 VRAM 압박을 완화한다.
         optim="paged_adamw_8bit",
         # SFTTrainer가 conversational(messages) 포맷을 자동으로 chat template 적용
         model_init_kwargs={

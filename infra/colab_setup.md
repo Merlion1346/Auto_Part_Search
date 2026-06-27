@@ -43,9 +43,10 @@ Colab 런타임은 일정 시간 후 초기화됩니다. 그래서 노트북은:
 
 ## 자주 겪는 문제
 
-- **torch/CUDA 충돌**: Colab에 이미 torch가 있어 `requirements.txt`의 `torch==2.5.1`
-  재설치가 런타임 CUDA와 어긋날 수 있습니다. 그럴 땐 해당 핀을 주석 처리하고
-  Colab 기본 torch로 나머지 패키지만 설치하세요.
+- **버전 충돌**: `requirements.txt` 는 torch를 핀하지 않고 최소 버전만 지정하므로
+  Colab 기본 torch/transformers를 그대로 사용합니다. 핵심은 `bitsandbytes>=0.46.1`
+  (transformers 5.x의 4-bit 양자화 요구) — 옛 버전(0.45.x)이 남아 있으면
+  `!pip install -U bitsandbytes` 로 갱신 후 학습 셀을 다시 실행하세요.
 - **T4에서 OOM**: `--batch-size 1`, `--max-seq-len 1024` 로 낮춥니다.
 - **세션 종료로 학습 중단**: 산출물이 Drive에 있으므로 마지막 체크포인트에서 재개하거나
   다시 8단계만 실행하면 됩니다. 장시간 학습은 Pro의 백그라운드 실행 옵션을 권장합니다.

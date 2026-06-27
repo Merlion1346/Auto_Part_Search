@@ -50,19 +50,19 @@
 
 ## 🚀 시작하기
 
-### 요구사항
+### 실행 환경
 
-- Python 3.10+
-- Java 11+ (데이터시트 PDF 파싱용 OpenDataLoader가 JVM 기반 — `java -version` 으로 확인, 없으면 [Adoptium](https://adoptium.net) 에서 설치)
-- CUDA 12.x GPU (QLoRA 학습 기준 권장 VRAM 24GB↑, 예: NVIDIA L4 / A100)
+데이터 수집과 QLoRA 학습을 **모두 Google Colab Pro**에서 실행합니다.
+바로 실행 가능한 노트북: **[`notebooks/auto_search_colab.ipynb`](notebooks/auto_search_colab.ipynb)**
+(전체 절차는 [infra/colab_setup.md](infra/colab_setup.md) 참고)
 
-### 설치
+- 권장 런타임: **Colab Pro — NVIDIA L4 24GB / A100** (무료 T4 16GB도 가능하나 배치/시퀀스 축소 필요)
+- 산출물은 휘발성 런타임 대신 **Google Drive**(`MyDrive/auto_search`)에 저장
+- 의존성: 노트북이 `default-jre`(PDF 파싱) + `requirements.txt` 를 자동 설치
+- 수집용 LLM: 노트북에서 [Ollama](https://ollama.com) `qwen3:8b` 를 띄워 사용 (외부 API로 교체 가능)
 
-```bash
-git clone <repository-url>
-cd auto_search
-pip install -r requirements.txt
-```
+> 로컬에서 개별 스크립트를 돌려보려면 Python 3.10+, Java 11+, CUDA 12.x GPU와
+> `pip install -r requirements.txt` 가 필요합니다. 아래 명령들은 노트북 셀에서도 동일하게 동작합니다.
 
 ### 1) 데이터 수집·파싱 (유통사 API + LLM)
 
@@ -101,7 +101,10 @@ python train/train_qlora.py \
     --output-dir models/qwen3-8b-parts-lora
 ```
 
-> GCP에서의 GPU VM 생성·실행 전체 절차는 [infra/gcp_setup.md](infra/gcp_setup.md) 참고.
+> 기본값(8B · batch 2 · grad_accum 8 · seq_len 2048 · gradient checkpointing)은
+> Colab Pro L4/A100(24GB↑) 기준입니다. 무료 T4 16GB에서는 `--batch-size 1`,
+> `--max-seq-len 1024` 로 낮추세요(T4는 bf16 미지원 → fp16 자동). Colab 전체 절차는
+> [infra/colab_setup.md](infra/colab_setup.md) 참고.
 
 ### 4) 부품 추천 (추론)
 
@@ -157,9 +160,11 @@ auto_search/
 │   └── train_qlora.py          # Qwen3-8B QLoRA 파인튜닝
 ├── src/
 │   └── recommend.py            # 학습된 어댑터로 부품 추천(추론)
+├── notebooks/
+│   └── auto_search_colab.ipynb # Colab 올인원 파이프라인(수집+학습+추론)
 ├── models/                     # 학습된 LoRA 어댑터/체크포인트 (생성됨)
 └── infra/
-    └── gcp_setup.md            # Google Cloud 학습 환경 가이드
+    └── colab_setup.md          # Google Colab 학습 환경 가이드
 ```
 
 > 현재 저장소 초기 단계입니다. 구조는 개발 진행에 따라 변경될 수 있습니다.
@@ -172,7 +177,7 @@ auto_search/
 - **베이스 모델**: [Qwen3-8B](https://huggingface.co/Qwen/Qwen3-8B)
 - **파인튜닝**: QLoRA (4-bit NF4 양자화 + LoRA 어댑터)
 - **프레임워크**: Hugging Face `transformers` · `trl`(SFTTrainer) · `peft` · `bitsandbytes`
-- **학습 인프라**: Google Cloud GPU VM (NVIDIA L4 / A100)
+- **학습 인프라**: Google Colab Pro (NVIDIA L4 / A100)
 - **학습 데이터**: 부품 데이터시트(전기적 사양, 패키지, 동작 조건 등)
 
 ## 📚 학습 데이터셋

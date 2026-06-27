@@ -1,22 +1,24 @@
-# 학습/추론 핵심 스택 (Qwen3-8B QLoRA, CUDA 12.x GPU 기준)
-# GCP GPU VM(L4 / A100)에서 검증된 조합으로 버전 고정
-torch==2.5.1
-transformers==4.56.2     # trl 0.29.0 요구: >=4.56.2
-trl==0.29.0
-peft==0.18.1
-bitsandbytes==0.45.0
-accelerate==1.4.0        # trl 0.29.0 요구: >=1.4.0
-datasets==3.2.0
+# 학습/추론 핵심 스택 (Qwen3-8B QLoRA, CUDA 12.x GPU)
+# Colab은 torch/transformers/datasets/accelerate가 이미 최신으로 깔려 있다.
+# 그래서 버전을 '==' 로 고정하지 않고 '최소 버전'만 지정해, Colab 기본 스택을
+# 그대로 쓰면서 부족한 패키지(bitsandbytes/peft/trl 등)만 설치/갱신되게 한다.
+# (torch 는 절대 핀하지 않는다 — 런타임 CUDA와 어긋나면 설치가 깨진다)
+transformers>=4.56.2,<6
+trl>=0.29.0,<2
+peft>=0.13.0
+bitsandbytes>=0.46.1        # transformers 5.x 4-bit 양자화 요구 버전
+accelerate>=1.4.0
+datasets>=3.2.0
 
 # 데이터시트 전처리 보조
-pyyaml==6.0.2
-pandas==2.2.3
+pyyaml>=6.0
+pandas>=2.0
 
 # 데이터 수집·파싱 파이프라인
-requests==2.32.3
-opendataloader-pdf==2.4.7   # 데이터시트 PDF → Markdown (Java 11+ 필요, JVM 기반)
-openai==1.59.6              # 사양 추출용 OpenAI 호환 LLM 클라이언트
-python-dotenv==1.0.1
+requests>=2.32
+opendataloader-pdf>=2.4.7   # 데이터시트 PDF → Markdown (Java 11+ 필요, JVM 기반)
+openai>=1.59                # 사양 추출용 OpenAI 호환 LLM 클라이언트
+python-dotenv>=1.0
 
 # 선택: 학습 모니터링
-tensorboard==2.18.0
+tensorboard>=2.18
