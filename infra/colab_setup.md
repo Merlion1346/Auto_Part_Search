@@ -1,0 +1,59 @@
+# Google Colab에서 데이터 수집 + Qwen3-8B QLoRA 학습하기
+
+데이터 수집과 LoRA 튜닝을 **모두 Google Colab Pro**에서 실행합니다.
+바로 실행 가능한 노트북: [`notebooks/auto_search_colab.ipynb`](../notebooks/auto_search_colab.ipynb)
+
+## 권장 런타임
+
+QLoRA(4-bit) 기준:
+
+| GPU | VRAM | 적합도 | 비고 |
+|-----|------|--------|------|
+| **A100 40GB** (Colab Pro) | 40GB | ✅ 여유 | 가장 빠름 |
+| **L4 24GB** (Colab Pro) | 24GB | ✅ 권장 (가성비) | bf16 사용 |
+| T4 16GB (무료) | 16GB | ⚠️ 가능하나 `--max-seq-len 1024 --batch-size 1` 필요 | bf16 미지원 → fp16 |
+
+`런타임 → 런타임 유형 변경`에서 GPU와 (Pro라면) L4/A100을 선택하세요.
+
+## 핵심 개념: Colab은 휘발성 → Drive에 저장
+
+Colab 런타임은 일정 시간 후 초기화됩니다. 그래서 노트북은:
+
+- 데이터시트 PDF / 카탈로그 / `train.jsonl` / 학습된 어댑터를 **Google Drive**(`/content/drive/MyDrive/auto_search`)에 저장합니다.
+- 런타임이 끊겨도 Drive의 산출물로 이어서 작업할 수 있습니다.
+
+## 노트북 단계 요약
+
+1. **GPU 확인** — `nvidia-smi`
+2. **Drive 마운트** — 저장 경로 `MyDrive/auto_search` 생성
+3. **코드/의존성** — 저장소 clone + `default-jre`(PDF 파싱) + `pip install -r requirements.txt`
+4. **Ollama 기동** — 수집 단계의 사양 추출/증강용 LLM(`qwen3:8b`)을 백그라운드 서빙
+   - 외부 API(DashScope 등)를 쓰면 이 단계 대신 `.env`의 `LLM_*`만 교체
+5. **시크릿** — Colab 보안 비밀(🔑)에 `MOUSER_API_KEY` 등록 → `.env` 자동 작성
+6. **데이터 수집** — `pipeline.build_catalog` → `parts_catalog.json`(Drive)
+7. **전처리** — `train/preprocess.py --augment` → `train.jsonl`(Drive)
+8. **학습** — `train/train_qlora.py` → 어댑터(Drive)
+9. **추론 테스트** — `src/recommend.py`
+
+## 키 발급
+
+- **Mouser**: <https://www.mouser.com/api-hub> (Search API v1)
+- **Digi-Key**: <https://developer.digikey.com> (OAuth2 client credentials)
+- 둘 중 하나만 있어도 수집 가능 (`--source mouser` / `--source digikey`)
+
+## 자주 겪는 문제
+
+- **torch/CUDA 충돌**: Colab에 이미 torch가 있어 `requirements.txt`의 `torch==2.5.1`
+  재설치가 런타임 CUDA와 어긋날 수 있습니다. 그럴 땐 해당 핀을 주석 처리하고
+  Colab 기본 torch로 나머지 패키지만 설치하세요.
+- **T4에서 OOM**: `--batch-size 1`, `--max-seq-len 1024` 로 낮춥니다.
+- **세션 종료로 학습 중단**: 산출물이 Drive에 있으므로 마지막 체크포인트에서 재개하거나
+  다시 8단계만 실행하면 됩니다. 장시간 학습은 Pro의 백그라운드 실행 옵션을 권장합니다.
+
+## (선택) 배포용 병합 체크포인트
+
+```python
+!python train/train_qlora.py --merge \
+    --output-dir "$DRIVE_ROOT/models/qwen3-8b-parts-lora"
+# → ...-merged (fp16/bf16 단일 모델, 약 16GB) 생성
+```

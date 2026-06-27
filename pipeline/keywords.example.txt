@@ -1,0 +1,8 @@
+3.3V LDO linear regulator
+5V LDO linear regulator
+logic level N-channel MOSFET
+buck converter 3A
+555 timer IC
+rail-to-rail op amp
+schottky diode 40V
+0.1uF ceramic capacitor X7R

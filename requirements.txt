@@ -1,0 +1,22 @@
+# 학습/추론 핵심 스택 (Qwen3-8B QLoRA, CUDA 12.x GPU 기준)
+# GCP GPU VM(L4 / A100)에서 검증된 조합으로 버전 고정
+torch==2.5.1
+transformers==4.56.2     # trl 0.29.0 요구: >=4.56.2
+trl==0.29.0
+peft==0.18.1
+bitsandbytes==0.45.0
+accelerate==1.4.0        # trl 0.29.0 요구: >=1.4.0
+datasets==3.2.0
+
+# 데이터시트 전처리 보조
+pyyaml==6.0.2
+pandas==2.2.3
+
+# 데이터 수집·파싱 파이프라인
+requests==2.32.3
+opendataloader-pdf==2.4.7   # 데이터시트 PDF → Markdown (Java 11+ 필요, JVM 기반)
+openai==1.59.6              # 사양 추출용 OpenAI 호환 LLM 클라이언트
+python-dotenv==1.0.1
+
+# 선택: 학습 모니터링
+tensorboard==2.18.0

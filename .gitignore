@@ -1,0 +1,23 @@
+# 비밀/자격증명
+.env
+
+# 데이터 산출물 (대용량)
+data/datasheets/
+data/parts_catalog.json
+data/train.jsonl
+
+# 학습 산출물
+models/
+
+# 파이썬
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 로그/추적
+runs/
+*.log
+
+# Claude Code 로컬 설정
+.claude/
