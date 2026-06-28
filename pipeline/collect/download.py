@@ -75,8 +75,11 @@ def download_pdf(url: str, part_name: str, dest_dir: str | None = None) -> str |
         is_pdf = "pdf" in ctype.lower() or resp.content[:4] == b"%PDF"
         if not is_pdf:
             hint = " (Cloudflare 챌린지로 보임)" if _looks_like_challenge(resp.content) else ""
+            # 어떤 HTML이 왔는지 진단용으로 앞부분 텍스트를 한 줄로 보여준다
+            snippet = " ".join(resp.text[:300].split())
             print(f"[download] PDF 아님, 건너뜀: {url} "
-                  f"({ctype}, {len(resp.content)} bytes){hint}")
+                  f"({ctype}, {len(resp.content)} bytes){hint}\n"
+                  f"           ↳ {snippet}")
             return None
         with open(path, "wb") as f:
             f.write(resp.content)
