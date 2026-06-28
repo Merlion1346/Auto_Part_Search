@@ -12,6 +12,10 @@
 
     # 또는 키워드를 파일(한 줄에 하나)로
     python -m pipeline.build_catalog --source mouser --keywords-file keywords.txt
+
+    # PDF 데이터시트만 내려받기 (LLM 추출/카탈로그 생략)
+    python -m pipeline.build_catalog --source mouser \
+        --keywords-file keywords.txt --download-only
 """
 
 import argparse
@@ -34,11 +38,12 @@ def _sleep(delay: float) -> None:
 
 
 def build(source: str, keywords: list[str], limit: int, out_path: str,
-          delay: float = 3.0) -> int:
+          delay: float = 3.0, download_only: bool = False) -> int:
     client = get_client(source)
     catalog: dict[str, dict] = {}  # part_name -> record (중복 제거)
-    n_with_pdf = 0  # 데이터시트를 실제로 받은 부품 수
-    first = True  # 첫 부품 앞에는 지연을 두지 않는다
+    seen: set[str] = set()         # download_only 모드의 중복 제거
+    n_with_pdf = 0                 # 데이터시트를 실제로 받은 부품 수
+    first = True                   # 첫 부품 앞에는 지연을 두지 않는다
 
     for kw in keywords:
         print(f"\n[검색] ({source}) '{kw}'")
@@ -51,14 +56,23 @@ def build(source: str, keywords: list[str], limit: int, out_path: str,
 
         for part in results:
             name = part.get("part_name")
-            if not name or name in catalog:
+            if not name or name in catalog or name in seen:
                 continue
+            seen.add(name)
 
             if not first:
                 _sleep(delay)  # 부품(데이터시트 처리) 사이 간격
             first = False
 
             pdf_path = download_pdf(part.get("datasheet_url"), name)
+
+            if download_only:
+                # PDF 다운로드만 하고 다음 부품으로 (LLM 추출/카탈로그 생략)
+                if pdf_path:
+                    n_with_pdf += 1
+                    print(f"  [PDF] {name} -> {pdf_path}")
+                continue
+
             text = ""
             if pdf_path:
                 try:
@@ -84,6 +98,10 @@ def build(source: str, keywords: list[str], limit: int, out_path: str,
             }
             print(f"  [OK] {name}")
 
+    if download_only:
+        print(f"\n데이터시트 {n_with_pdf}/{len(seen)}개를 {cfg.pdf_dir} 에 내려받았습니다.")
+        return n_with_pdf
+
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
     records = list(catalog.values())
     with open(out_path, "w", encoding="utf-8") as f:
@@ -102,6 +120,8 @@ def main():
     ap.add_argument("--limit", type=int, default=25, help="키워드당 최대 부품 수")
     ap.add_argument("--delay", type=float, default=3.0,
                     help="부품 사이 지연(초, 기본 3). rate-limit 완화용 (±30%% 지터 자동 적용). 0이면 끔")
+    ap.add_argument("--download-only", action="store_true",
+                    help="PDF 데이터시트만 내려받고 LLM 추출/카탈로그 생성은 건너뜀")
     ap.add_argument("--out", default=cfg.catalog_path)
     args = ap.parse_args()
 
@@ -112,7 +132,8 @@ def main():
     if not keywords:
         raise SystemExit("키워드가 필요합니다 (--keywords 또는 --keywords-file).")
 
-    build(args.source, keywords, args.limit, args.out, delay=args.delay)
+    build(args.source, keywords, args.limit, args.out,
+          delay=args.delay, download_only=args.download_only)
 
 
 if __name__ == "__main__":
