@@ -27,7 +27,7 @@ Colab 런타임은 일정 시간 후 초기화됩니다. 그래서 노트북은:
 1. **GPU 확인** — `nvidia-smi`
 2. **Drive 마운트** — 저장 경로 `MyDrive/auto_search` 생성
 3. **코드/의존성** — 저장소 clone + `default-jre`(PDF 파싱) + `pip install -r requirements.txt`
-4. **llama.cpp 서버 기동** — llama.cpp를 CUDA로 빌드 후 `llama-server` 로 Qwen3-14B(GGUF, `-hf` 자동 다운로드)를 OpenAI 호환(`:8000/v1`)으로 서빙
+4. **llama.cpp 서버 기동** — llama.cpp를 CUDA로 빌드 후 `llama-server` 로 Qwen3-14B(GGUF, `-hf` 자동 다운로드)를 OpenAI 호환(`:8000/v1`)으로 서빙. reasoning(thinking)은 `--reasoning-budget 0` 으로 끔
    - Ollama/vLLM/외부 API(DashScope 등)를 쓰면 이 단계 대신 `.env`의 `LLM_*`만 교체
 5. **시크릿** — Colab 보안 비밀(🔑)에 `MOUSER_API_KEY` 등록 → `.env` 자동 작성
 6. **데이터 수집** — `pipeline.build_catalog` → `parts_catalog.json`(Drive)
