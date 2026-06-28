@@ -37,6 +37,7 @@ def build(source: str, keywords: list[str], limit: int, out_path: str,
           delay: float = 3.0) -> int:
     client = get_client(source)
     catalog: dict[str, dict] = {}  # part_name -> record (중복 제거)
+    n_with_pdf = 0  # 데이터시트를 실제로 받은 부품 수
     first = True  # 첫 부품 앞에는 지연을 두지 않는다
 
     for kw in keywords:
@@ -62,12 +63,10 @@ def build(source: str, keywords: list[str], limit: int, out_path: str,
             if pdf_path:
                 try:
                     text = extract_text(pdf_path)
+                    n_with_pdf += 1
                 except Exception as e:
                     print(f"  [{name}] PDF 파싱 실패: {e}")
-            else:
-                # 데이터시트를 못 받아도 유통사 API 사양만으로 카탈로그를 만든다
-                # (단, 데이터시트 요약/레퍼런스 회로 품질은 떨어짐)
-                print(f"  [{name}] 데이터시트 없이 API 사양으로 진행")
+            # 데이터시트를 못 받아도 유통사 API 사양만으로 카탈로그를 만든다(조용히 진행)
 
             extracted = extract_specs(part, text)
             if not extracted:
@@ -89,8 +88,10 @@ def build(source: str, keywords: list[str], limit: int, out_path: str,
     records = list(catalog.values())
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(records, f, ensure_ascii=False, indent=2)
-    print(f"\n총 {len(records)}개 부품을 {out_path} 에 저장했습니다.")
-    return len(records)
+    n = len(records)
+    print(f"\n총 {n}개 부품을 {out_path} 에 저장했습니다 "
+          f"(데이터시트 {n_with_pdf}개 확보 / API 사양만 {n - n_with_pdf}개).")
+    return n
 
 
 def main():

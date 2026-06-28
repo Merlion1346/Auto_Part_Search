@@ -25,6 +25,7 @@ HEADERS = {
 }
 
 _session = None
+_skip_warned = False  # 차단 스킵 로그는 최초 1회만 출력
 
 
 def _get_session():
@@ -80,16 +81,16 @@ def download_pdf(url: str, part_name: str, dest_dir: str | None = None) -> str |
         ctype = resp.headers.get("Content-Type", "")
         is_pdf = "pdf" in ctype.lower() or resp.content[:4] == b"%PDF"
         if not is_pdf:
-            hint = _block_hint(resp.content)
-            # 어떤 HTML이 왔는지 진단용으로 앞부분 텍스트를 한 줄로 보여준다
-            snippet = " ".join(resp.text[:300].split())
-            print(f"[download] PDF 아님, 건너뜀: {url} "
-                  f"({ctype}, {len(resp.content)} bytes){hint}\n"
-                  f"           ↳ {snippet}")
+            # 차단(PerimeterX 등)은 부품마다 반복되므로 최초 1회만 안내하고 이후엔 조용히 None
+            global _skip_warned
+            if not _skip_warned:
+                hint = _block_hint(resp.content) or f" ({ctype})"
+                print(f"[download] 데이터시트 다운로드가 차단됨{hint}. "
+                      f"이후 동일 건은 생략하고 API 사양만으로 진행합니다.")
+                _skip_warned = True
             return None
         with open(path, "wb") as f:
             f.write(resp.content)
         return path
-    except requests.RequestException as e:
-        print(f"[download] 실패: {url} -> {e}")
+    except requests.RequestException:
         return None
