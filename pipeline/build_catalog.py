@@ -17,6 +17,8 @@
 import argparse
 import json
 import os
+import random
+import time
 
 from .collect import get_client
 from .collect.download import download_pdf
@@ -24,9 +26,18 @@ from .config import cfg
 from .parse import extract_specs, extract_text
 
 
-def build(source: str, keywords: list[str], limit: int, out_path: str) -> int:
+def _sleep(delay: float) -> None:
+    """부품 간 지연. 기계적으로 보이지 않게 ±30% 지터를 섞는다."""
+    if delay <= 0:
+        return
+    time.sleep(delay * random.uniform(0.7, 1.3))
+
+
+def build(source: str, keywords: list[str], limit: int, out_path: str,
+          delay: float = 0.0) -> int:
     client = get_client(source)
     catalog: dict[str, dict] = {}  # part_name -> record (중복 제거)
+    first = True  # 첫 부품 앞에는 지연을 두지 않는다
 
     for kw in keywords:
         print(f"\n[검색] ({source}) '{kw}'")
@@ -41,6 +52,10 @@ def build(source: str, keywords: list[str], limit: int, out_path: str) -> int:
             name = part.get("part_name")
             if not name or name in catalog:
                 continue
+
+            if not first:
+                _sleep(delay)  # 부품(데이터시트 처리) 사이 간격
+            first = False
 
             pdf_path = download_pdf(part.get("datasheet_url"), name)
             text = ""
@@ -84,6 +99,8 @@ def main():
     ap.add_argument("--keywords", nargs="*", default=[], help="검색 키워드(공백 구분)")
     ap.add_argument("--keywords-file", help="키워드 파일(한 줄에 하나)")
     ap.add_argument("--limit", type=int, default=25, help="키워드당 최대 부품 수")
+    ap.add_argument("--delay", type=float, default=0.0,
+                    help="부품 사이 지연(초). rate-limit 완화용 (±30%% 지터 자동 적용)")
     ap.add_argument("--out", default=cfg.catalog_path)
     args = ap.parse_args()
 
@@ -94,7 +111,7 @@ def main():
     if not keywords:
         raise SystemExit("키워드가 필요합니다 (--keywords 또는 --keywords-file).")
 
-    build(args.source, keywords, args.limit, args.out)
+    build(args.source, keywords, args.limit, args.out, delay=args.delay)
 
 
 if __name__ == "__main__":
