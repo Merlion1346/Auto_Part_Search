@@ -43,10 +43,16 @@ def _get_session():
     return _session
 
 
-def _looks_like_challenge(content: bytes) -> bool:
-    head = content[:2000].lower()
-    return any(s in head for s in (b"cloudflare", b"just a moment", b"cf-challenge",
-                                   b"challenge-platform", b"enable javascript"))
+def _block_hint(content: bytes) -> str:
+    head = content[:3000].lower()
+    if b"access to this page has been denied" in head or b"perimeterx" in head \
+            or b"px-captcha" in head or b"/_px" in head or b"human" in head:
+        # Mouser는 PerimeterX 봇 차단을 쓴다. 데이터센터(예: Colab) IP는 거의 차단된다.
+        return " (PerimeterX 봇 차단 — 데이터센터 IP는 우회 불가에 가까움)"
+    if any(s in head for s in (b"cloudflare", b"just a moment", b"cf-challenge",
+                               b"challenge-platform")):
+        return " (Cloudflare 챌린지로 보임)"
+    return ""
 
 
 def download_pdf(url: str, part_name: str, dest_dir: str | None = None) -> str | None:
@@ -74,7 +80,7 @@ def download_pdf(url: str, part_name: str, dest_dir: str | None = None) -> str |
         ctype = resp.headers.get("Content-Type", "")
         is_pdf = "pdf" in ctype.lower() or resp.content[:4] == b"%PDF"
         if not is_pdf:
-            hint = " (Cloudflare 챌린지로 보임)" if _looks_like_challenge(resp.content) else ""
+            hint = _block_hint(resp.content)
             # 어떤 HTML이 왔는지 진단용으로 앞부분 텍스트를 한 줄로 보여준다
             snippet = " ".join(resp.text[:300].split())
             print(f"[download] PDF 아님, 건너뜀: {url} "

@@ -49,6 +49,10 @@ def build(source: str, keywords: list[str], limit: int, out_path: str) -> int:
                     text = extract_text(pdf_path)
                 except Exception as e:
                     print(f"  [{name}] PDF 파싱 실패: {e}")
+            else:
+                # 데이터시트를 못 받아도 유통사 API 사양만으로 카탈로그를 만든다
+                # (단, 데이터시트 요약/레퍼런스 회로 품질은 떨어짐)
+                print(f"  [{name}] 데이터시트 없이 API 사양으로 진행")
 
             extracted = extract_specs(part, text)
             if not extracted:
