@@ -18,7 +18,7 @@ import argparse
 import torch
 from datasets import load_dataset
 from peft import LoraConfig
-from transformers import AutoTokenizer, BitsAndBytesConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from trl import SFTConfig, SFTTrainer
 
 
@@ -61,6 +61,16 @@ def main():
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
+    # 모델을 직접 로드해 SFTTrainer에 객체로 넘긴다.
+    # (SFTConfig.model_init_kwargs 에 torch.dtype/bnb config 를 넣으면 TensorBoard 콜백이
+    #  args 를 JSON 직렬화할 때 'dtype is not JSON serializable' 로 죽는다)
+    model = AutoModelForCausalLM.from_pretrained(
+        args.model_id,
+        quantization_config=bnb_config,
+        torch_dtype=compute_dtype,
+        device_map="auto",
+    )
+
     # LoRA: 어텐션 + MLP 투영 레이어 전체 타깃 (Qwen3 아키텍처)
     peft_config = LoraConfig(
         task_type="CAUSAL_LM",
@@ -98,16 +108,10 @@ def main():
         # bitsandbytes 4-bit에 맞는 옵티마이저. paged_*는 OOM 시 옵티마이저 상태를
         # CPU RAM으로 페이징해 VRAM 압박을 완화한다.
         optim="paged_adamw_8bit",
-        # SFTTrainer가 conversational(messages) 포맷을 자동으로 chat template 적용
-        model_init_kwargs={
-            "quantization_config": bnb_config,
-            "torch_dtype": compute_dtype,
-            "device_map": "auto",
-        },
     )
 
     trainer = SFTTrainer(
-        model=args.model_id,
+        model=model,
         args=sft_config,
         train_dataset=dataset,
         peft_config=peft_config,
