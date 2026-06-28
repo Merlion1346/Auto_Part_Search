@@ -59,7 +59,7 @@
 - 권장 런타임: **Colab Pro — NVIDIA A100 40GB** (L4 24GB / T4 16GB도 가능하나 배치/시퀀스 축소 필요)
 - 산출물은 휘발성 런타임 대신 **Google Drive**(`MyDrive/auto_search`)에 저장
 - 의존성: 노트북이 `default-jre`(PDF 파싱) + `requirements.txt` 를 자동 설치
-- 수집용 LLM: 노트북에서 [Ollama](https://ollama.com) `qwen3:14b` 를 띄워 사용 (외부 API로 교체 가능)
+- 수집용 LLM: 노트북에서 [llama.cpp](https://github.com/ggml-org/llama.cpp) `llama-server` 로 Qwen3-14B(GGUF)를 OpenAI 호환 서빙 (Ollama/vLLM/외부 API로 교체 가능)
 
 > 로컬에서 개별 스크립트를 돌려보려면 Python 3.10+, Java 11+, CUDA 12.x GPU와
 > `pip install -r requirements.txt` 가 필요합니다. 아래 명령들은 노트북 셀에서도 동일하게 동작합니다.

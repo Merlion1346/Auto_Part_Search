@@ -111,8 +111,8 @@ def _get_llm():
         from openai import OpenAI
 
         _llm_client = OpenAI(
-            base_url=os.getenv("LLM_BASE_URL", "http://localhost:11434/v1"),
-            api_key=os.getenv("LLM_API_KEY", "ollama"),
+            base_url=os.getenv("LLM_BASE_URL", "http://localhost:8000/v1"),
+            api_key=os.getenv("LLM_API_KEY", "EMPTY"),
         )
     return _llm_client
 
@@ -152,7 +152,7 @@ def llm_generate_requirements(part: dict, n: int) -> list[str]:
     )
     try:
         resp = _get_llm().chat.completions.create(
-            model=os.getenv("LLM_MODEL", "qwen3:14b"),
+            model=os.getenv("LLM_MODEL", "qwen3-14b"),
             messages=[
                 {"role": "system", "content": AUG_SYSTEM},
                 {"role": "user", "content": prompt},
@@ -217,7 +217,7 @@ def llm_generate_circuit_requirements(circuit: dict, n: int) -> list[str]:
     )
     try:
         resp = _get_llm().chat.completions.create(
-            model=os.getenv("LLM_MODEL", "qwen3:14b"),
+            model=os.getenv("LLM_MODEL", "qwen3-14b"),
             messages=[
                 {"role": "system", "content": AUG_SYSTEM},
                 {"role": "user", "content": prompt},

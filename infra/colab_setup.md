@@ -27,8 +27,8 @@ Colab 런타임은 일정 시간 후 초기화됩니다. 그래서 노트북은:
 1. **GPU 확인** — `nvidia-smi`
 2. **Drive 마운트** — 저장 경로 `MyDrive/auto_search` 생성
 3. **코드/의존성** — 저장소 clone + `default-jre`(PDF 파싱) + `pip install -r requirements.txt`
-4. **Ollama 기동** — 수집 단계의 사양 추출/증강용 LLM(`qwen3:14b`)을 백그라운드 서빙
-   - 외부 API(DashScope 등)를 쓰면 이 단계 대신 `.env`의 `LLM_*`만 교체
+4. **llama.cpp 서버 기동** — llama.cpp를 CUDA로 빌드 후 `llama-server` 로 Qwen3-14B(GGUF, `-hf` 자동 다운로드)를 OpenAI 호환(`:8000/v1`)으로 서빙
+   - Ollama/vLLM/외부 API(DashScope 등)를 쓰면 이 단계 대신 `.env`의 `LLM_*`만 교체
 5. **시크릿** — Colab 보안 비밀(🔑)에 `MOUSER_API_KEY` 등록 → `.env` 자동 작성
 6. **데이터 수집** — `pipeline.build_catalog` → `parts_catalog.json`(Drive)
 7. **전처리** — `train/preprocess.py --augment` → `train.jsonl`(Drive)
@@ -47,8 +47,11 @@ Colab 런타임은 일정 시간 후 초기화됩니다. 그래서 노트북은:
   Colab 기본 torch/transformers를 그대로 사용합니다. 핵심은 `bitsandbytes>=0.46.1`
   (transformers 5.x의 4-bit 양자화 요구) — 옛 버전(0.45.x)이 남아 있으면
   `!pip install -U bitsandbytes` 로 갱신 후 학습 셀을 다시 실행하세요.
-- **Ollama 설치 실패 `requires zstd`**: Colab에 zstd가 없어 발생합니다.
-  `!apt-get -qq install -y zstd` 후 Ollama 셀을 다시 실행하세요(노트북 4번 셀에 포함됨).
+- **llama-server `-hf` 다운로드 실패**: llama.cpp가 libcurl 없이 빌드되면 `-hf`가 동작하지
+  않습니다. `libcurl4-openssl-dev` 설치 후 `-DLLAMA_CURL=ON` 으로 재빌드하세요(노트북 4번 셀에 포함됨).
+  GGUF(~9GB) 첫 다운로드가 오래 걸릴 수 있으니, 서버가 응답할 때까지 기다린 뒤 다음 셀을 실행하세요.
+- **(대안) Ollama 사용 시 `requires zstd`**: `!apt-get -qq install -y zstd` 후
+  `ollama serve` + `ollama pull qwen3:14b` 로 띄우고 `.env`의 `LLM_*`를 Ollama 값으로 바꾸세요.
 - **T4/L4에서 OOM**: `--batch-size 1`, (그래도 부족하면) `--max-seq-len 1024` 로 낮춥니다.
 - **세션 종료로 학습 중단**: 산출물이 Drive에 있으므로 마지막 체크포인트에서 재개하거나
   다시 8단계만 실행하면 됩니다. 장시간 학습은 Pro의 백그라운드 실행 옵션을 권장합니다.

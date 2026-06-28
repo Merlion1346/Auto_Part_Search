@@ -27,14 +27,16 @@ class Config:
     mouser_base: str = os.getenv("MOUSER_BASE", "https://api.mouser.com")
 
     # --- 사양 추출용 LLM (OpenAI 호환 엔드포인트) ---
-    # Colab에서 데이터 수집 시: 노트북에서 Ollama를 백그라운드로 띄워 사용(`ollama serve`
-    #   + `ollama pull qwen3:14b`) → 아래 기본값 그대로 사용.
+    # Colab에서 데이터 수집 시: 노트북에서 llama.cpp 의 llama-server 를 OpenAI 호환
+    #   엔드포인트로 띄워 사용(아래 기본값 그대로). response_format=json_object 가
+    #   grammar 로 JSON 을 강제하므로 Qwen3 thinking 토큰이 섞여도 파싱이 깨지지 않는다.
     # 다른 옵션:
-    #   로컬/Colab vLLM:  http://localhost:8000/v1  (LLM_MODEL=Qwen/Qwen3-14B)
+    #   Ollama:  http://localhost:11434/v1  (LLM_API_KEY=ollama, LLM_MODEL=qwen3:14b)
+    #   vLLM:    http://localhost:8000/v1   (LLM_MODEL=Qwen/Qwen3-14B)
     #   DashScope 클라우드: https://dashscope-intl.aliyuncs.com/compatible-mode/v1 (LLM_MODEL=qwen-plus)
-    llm_base_url: str = os.getenv("LLM_BASE_URL", "http://localhost:11434/v1")
-    llm_api_key: str = os.getenv("LLM_API_KEY", "ollama")
-    llm_model: str = os.getenv("LLM_MODEL", "qwen3:14b")
+    llm_base_url: str = os.getenv("LLM_BASE_URL", "http://localhost:8000/v1")
+    llm_api_key: str = os.getenv("LLM_API_KEY", "EMPTY")
+    llm_model: str = os.getenv("LLM_MODEL", "qwen3-14b")
 
     # --- 경로 ---
     pdf_dir: str = os.getenv("PDF_DIR", "data/datasheets")
