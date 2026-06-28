@@ -1,7 +1,13 @@
-"""데이터시트 PDF 다운로드. URL → 로컬 파일 경로."""
+"""데이터시트 PDF 다운로드. URL → 로컬 파일 경로.
+
+Mouser 등은 Cloudflare 뒤에 데이터시트를 두는 경우가 많아, 일반 요청에는 PDF 대신
+챌린지 HTML이 돌아온다. 가능하면 cloudscraper(Cloudflare 우회)로 받고, 없으면
+requests 세션으로 폴백한다.
+"""
 
 import hashlib
 import os
+from urllib.parse import urlsplit
 
 import requests
 
@@ -17,6 +23,30 @@ HEADERS = {
     "Accept": "application/pdf,application/octet-stream,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
 }
+
+_session = None
+
+
+def _get_session():
+    """cloudscraper 세션을 우선 생성(Cloudflare 우회), 없으면 requests 세션."""
+    global _session
+    if _session is None:
+        try:
+            import cloudscraper
+
+            _session = cloudscraper.create_scraper(
+                browser={"browser": "chrome", "platform": "windows", "mobile": False}
+            )
+        except Exception:
+            _session = requests.Session()
+        _session.headers.update(HEADERS)
+    return _session
+
+
+def _looks_like_challenge(content: bytes) -> bool:
+    head = content[:2000].lower()
+    return any(s in head for s in (b"cloudflare", b"just a moment", b"cf-challenge",
+                                   b"challenge-platform", b"enable javascript"))
 
 
 def download_pdf(url: str, part_name: str, dest_dir: str | None = None) -> str | None:
@@ -35,18 +65,18 @@ def download_pdf(url: str, part_name: str, dest_dir: str | None = None) -> str |
         return path  # 캐시 재사용
 
     # 일부 사이트는 같은 호스트의 Referer가 있어야 PDF를 내준다
-    from urllib.parse import urlsplit
-
     parts = urlsplit(url)
-    headers = {**HEADERS, "Referer": f"{parts.scheme}://{parts.netloc}/"}
+    headers = {"Referer": f"{parts.scheme}://{parts.netloc}/"}
 
     try:
-        resp = requests.get(url, headers=headers, timeout=60, allow_redirects=True)
+        resp = _get_session().get(url, headers=headers, timeout=60, allow_redirects=True)
         resp.raise_for_status()
         ctype = resp.headers.get("Content-Type", "")
-        if "pdf" not in ctype.lower() and not resp.content[:4] == b"%PDF":
+        is_pdf = "pdf" in ctype.lower() or resp.content[:4] == b"%PDF"
+        if not is_pdf:
+            hint = " (Cloudflare 챌린지로 보임)" if _looks_like_challenge(resp.content) else ""
             print(f"[download] PDF 아님, 건너뜀: {url} "
-                  f"({ctype}, {len(resp.content)} bytes)")
+                  f"({ctype}, {len(resp.content)} bytes){hint}")
             return None
         with open(path, "wb") as f:
             f.write(resp.content)

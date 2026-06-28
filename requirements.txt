@@ -16,6 +16,7 @@ pandas>=2.0
 
 # 데이터 수집·파싱 파이프라인
 requests>=2.32
+cloudscraper>=1.2.71        # Cloudflare 뒤 데이터시트(PDF) 다운로드 우회
 opendataloader-pdf>=2.4.7   # 데이터시트 PDF → Markdown (Java 11+ 필요, JVM 기반)
 openai>=1.59                # 사양 추출용 OpenAI 호환 LLM 클라이언트
 python-dotenv>=1.0
