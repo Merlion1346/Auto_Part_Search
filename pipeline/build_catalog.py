@@ -34,7 +34,7 @@ def _sleep(delay: float) -> None:
 
 
 def build(source: str, keywords: list[str], limit: int, out_path: str,
-          delay: float = 0.0) -> int:
+          delay: float = 3.0) -> int:
     client = get_client(source)
     catalog: dict[str, dict] = {}  # part_name -> record (중복 제거)
     first = True  # 첫 부품 앞에는 지연을 두지 않는다
@@ -99,8 +99,8 @@ def main():
     ap.add_argument("--keywords", nargs="*", default=[], help="검색 키워드(공백 구분)")
     ap.add_argument("--keywords-file", help="키워드 파일(한 줄에 하나)")
     ap.add_argument("--limit", type=int, default=25, help="키워드당 최대 부품 수")
-    ap.add_argument("--delay", type=float, default=0.0,
-                    help="부품 사이 지연(초). rate-limit 완화용 (±30%% 지터 자동 적용)")
+    ap.add_argument("--delay", type=float, default=3.0,
+                    help="부품 사이 지연(초, 기본 3). rate-limit 완화용 (±30%% 지터 자동 적용). 0이면 끔")
     ap.add_argument("--out", default=cfg.catalog_path)
     args = ap.parse_args()
 
