@@ -102,5 +102,7 @@ def extract_specs(part: dict, datasheet_text: str) -> dict | None:
         print(f"[llm_extract] JSON 파싱 실패 ({part.get('part_name')}): {e}")
         return None
     except Exception as e:  # API/네트워크 오류
-        print(f"[llm_extract] LLM 호출 실패 ({part.get('part_name')}): {e}")
+        print(f"[llm_extract] LLM 호출 실패 ({part.get('part_name')}): {e}\n"
+              f"           ↳ endpoint={cfg.llm_base_url} model={cfg.llm_model} "
+              f"— 서버가 떠 있는지/주소가 맞는지 확인하세요(.env 의 LLM_*).")
         return None
