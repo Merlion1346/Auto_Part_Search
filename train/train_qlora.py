@@ -1,16 +1,16 @@
-"""Qwen3-8B QLoRA 파인튜닝 (4-bit NF4 + LoRA).
+"""Qwen3-14B QLoRA 파인튜닝 (4-bit NF4 + LoRA).
 
-Google Colab Pro(권장: L4 24GB / A100 40GB)에서 실행하도록 맞춰져 있다.
-기본값(8B + batch 2 + grad_accum 8 + seq_len 2048 + gradient checkpointing)은
-24GB↑ VRAM 한 장 기준이다. 무료 Colab의 T4 16GB에서 돌릴 경우
---max-seq-len 1024 / --batch-size 1 로 낮춘다(T4는 bf16 미지원 → fp16 자동 사용).
+Google Colab Pro의 A100 40GB에서 실행하도록 맞춰져 있다.
+기본값(14B + batch 2 + grad_accum 8 + seq_len 2048 + gradient checkpointing)은
+A100 40GB 한 장 기준이다. VRAM이 작은 GPU(L4 24GB / T4 16GB 등)에서는
+--batch-size 1 / --max-seq-len 1024 로 낮춘다(T4는 bf16 미지원 → fp16 자동 사용).
 
   python train/preprocess.py
   python train/train_qlora.py \
       --train-file data/train.jsonl \
-      --output-dir models/qwen3-8b-parts-lora
+      --output-dir models/qwen3-14b-parts-lora
 
-검증 라이브러리: transformers==4.56.2, trl==0.29.0, peft==0.18.1, bitsandbytes==0.45.0
+검증 환경: Colab 기본 스택(transformers 5.x, trl 1.x) + bitsandbytes>=0.46.1
 """
 
 import argparse
@@ -24,14 +24,14 @@ from trl import SFTConfig, SFTTrainer
 
 def parse_args():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model-id", default="Qwen/Qwen3-8B")
+    ap.add_argument("--model-id", default="Qwen/Qwen3-14B")
     ap.add_argument("--train-file", default="data/train.jsonl")
-    ap.add_argument("--output-dir", default="models/qwen3-8b-parts-lora")
+    ap.add_argument("--output-dir", default="models/qwen3-14b-parts-lora")
     ap.add_argument("--epochs", type=float, default=3.0)
     ap.add_argument("--batch-size", type=int, default=2)
     ap.add_argument("--grad-accum", type=int, default=8)
     ap.add_argument("--lr", type=float, default=2e-4)
-    # L4/A100(24GB↑) 기준. T4 16GB면 1024로 낮춘다.
+    # A100 40GB 기준. VRAM이 작은 GPU(L4/T4)면 1024로 낮춘다.
     ap.add_argument("--max-seq-len", type=int, default=2048)
     ap.add_argument("--lora-r", type=int, default=16)
     ap.add_argument("--lora-alpha", type=int, default=32)
@@ -49,7 +49,7 @@ def main():
     compute_dtype = torch.bfloat16 if use_bf16 else torch.float16
     print(f"compute dtype = {'bfloat16' if use_bf16 else 'float16'}")
 
-    # 4-bit NF4 양자화 (QLoRA의 핵심) — 8B 모델을 24GB GPU(Colab L4/A100) 한 장에 적재
+    # 4-bit NF4 양자화 (QLoRA의 핵심) — 14B 모델을 A100 40GB 한 장에 적재
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type="nf4",

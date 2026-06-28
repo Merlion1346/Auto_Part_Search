@@ -28,13 +28,13 @@ class Config:
 
     # --- 사양 추출용 LLM (OpenAI 호환 엔드포인트) ---
     # Colab에서 데이터 수집 시: 노트북에서 Ollama를 백그라운드로 띄워 사용(`ollama serve`
-    #   + `ollama pull qwen3:8b`) → 아래 기본값 그대로 사용.
+    #   + `ollama pull qwen3:14b`) → 아래 기본값 그대로 사용.
     # 다른 옵션:
-    #   로컬/Colab vLLM:  http://localhost:8000/v1  (LLM_MODEL=Qwen/Qwen3-8B)
+    #   로컬/Colab vLLM:  http://localhost:8000/v1  (LLM_MODEL=Qwen/Qwen3-14B)
     #   DashScope 클라우드: https://dashscope-intl.aliyuncs.com/compatible-mode/v1 (LLM_MODEL=qwen-plus)
     llm_base_url: str = os.getenv("LLM_BASE_URL", "http://localhost:11434/v1")
     llm_api_key: str = os.getenv("LLM_API_KEY", "ollama")
-    llm_model: str = os.getenv("LLM_MODEL", "qwen3:8b")
+    llm_model: str = os.getenv("LLM_MODEL", "qwen3:14b")
 
     # --- 경로 ---
     pdf_dir: str = os.getenv("PDF_DIR", "data/datasheets")

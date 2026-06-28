@@ -56,10 +56,10 @@
 바로 실행 가능한 노트북: **[`notebooks/auto_search_colab.ipynb`](notebooks/auto_search_colab.ipynb)**
 (전체 절차는 [infra/colab_setup.md](infra/colab_setup.md) 참고)
 
-- 권장 런타임: **Colab Pro — NVIDIA L4 24GB / A100** (무료 T4 16GB도 가능하나 배치/시퀀스 축소 필요)
+- 권장 런타임: **Colab Pro — NVIDIA A100 40GB** (L4 24GB / T4 16GB도 가능하나 배치/시퀀스 축소 필요)
 - 산출물은 휘발성 런타임 대신 **Google Drive**(`MyDrive/auto_search`)에 저장
 - 의존성: 노트북이 `default-jre`(PDF 파싱) + `requirements.txt` 를 자동 설치
-- 수집용 LLM: 노트북에서 [Ollama](https://ollama.com) `qwen3:8b` 를 띄워 사용 (외부 API로 교체 가능)
+- 수집용 LLM: 노트북에서 [Ollama](https://ollama.com) `qwen3:14b` 를 띄워 사용 (외부 API로 교체 가능)
 
 > 로컬에서 개별 스크립트를 돌려보려면 Python 3.10+, Java 11+, CUDA 12.x GPU와
 > `pip install -r requirements.txt` 가 필요합니다. 아래 명령들은 노트북 셀에서도 동일하게 동작합니다.
@@ -93,23 +93,23 @@ python train/preprocess.py --augment --num-variations 5
 > 같은 부품을 여러 어투로 학습시켜 추천 모델의 일반화 성능을 높입니다.
 > (LLM 호출 실패 시 규칙 기반 샘플 1건으로 자동 폴백)
 
-### 3) 파인튜닝 (Qwen3-8B + QLoRA)
+### 3) 파인튜닝 (Qwen3-14B + QLoRA)
 
 ```bash
 python train/train_qlora.py \
     --train-file data/train.jsonl \
-    --output-dir models/qwen3-8b-parts-lora
+    --output-dir models/qwen3-14b-parts-lora
 ```
 
-> 기본값(8B · batch 2 · grad_accum 8 · seq_len 2048 · gradient checkpointing)은
-> Colab Pro L4/A100(24GB↑) 기준입니다. 무료 T4 16GB에서는 `--batch-size 1`,
+> 기본값(14B · batch 2 · grad_accum 8 · seq_len 2048 · gradient checkpointing)은
+> Colab Pro A100 40GB 기준입니다. VRAM이 작은 GPU(L4/T4)에서는 `--batch-size 1`,
 > `--max-seq-len 1024` 로 낮추세요(T4는 bf16 미지원 → fp16 자동). Colab 전체 절차는
 > [infra/colab_setup.md](infra/colab_setup.md) 참고.
 
 ### 4) 부품 추천 (추론)
 
 ```bash
-python src/recommend.py --adapter models/qwen3-8b-parts-lora \
+python src/recommend.py --adapter models/qwen3-14b-parts-lora \
     "5V를 3.3V로 변환하고 1A 이상 출력하는 LDO 추천해줘"
 ```
 
@@ -157,7 +157,7 @@ auto_search/
 │   └── datasheets/                 # 내려받은 PDF (생성됨)
 ├── train/
 │   ├── preprocess.py           # 카탈로그 → 학습 데이터셋 변환
-│   └── train_qlora.py          # Qwen3-8B QLoRA 파인튜닝
+│   └── train_qlora.py          # Qwen3-14B QLoRA 파인튜닝
 ├── src/
 │   └── recommend.py            # 학습된 어댑터로 부품 추천(추론)
 ├── notebooks/
@@ -174,10 +174,10 @@ auto_search/
 ## 🛠 기술 스택
 
 - **언어**: Python 3.10+
-- **베이스 모델**: [Qwen3-8B](https://huggingface.co/Qwen/Qwen3-8B)
+- **베이스 모델**: [Qwen3-14B](https://huggingface.co/Qwen/Qwen3-14B)
 - **파인튜닝**: QLoRA (4-bit NF4 양자화 + LoRA 어댑터)
 - **프레임워크**: Hugging Face `transformers` · `trl`(SFTTrainer) · `peft` · `bitsandbytes`
-- **학습 인프라**: Google Colab Pro (NVIDIA L4 / A100)
+- **학습 인프라**: Google Colab Pro (NVIDIA A100 40GB)
 - **학습 데이터**: 부품 데이터시트(전기적 사양, 패키지, 동작 조건 등)
 
 ## 📚 학습 데이터셋
@@ -199,7 +199,7 @@ LLM은 부품 데이터시트를 가공한 데이터셋으로 학습합니다.
 
 ## 📌 로드맵
 
-- [x] QLoRA 학습/추론 파이프라인 스캐폴딩 (Qwen3-8B)
+- [x] QLoRA 학습/추론 파이프라인 스캐폴딩 (Qwen3-14B)
 - [x] 데이터 수집·파싱 파이프라인 (유통사 API + LLM 사양 추출)
 - [x] 요구사항 다양화 증강 (paraphrase augmentation)
 - [x] 레퍼런스 회로 → 전체 BOM 학습 샘플 생성

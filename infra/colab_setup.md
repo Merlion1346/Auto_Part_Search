@@ -1,19 +1,19 @@
-# Google Colab에서 데이터 수집 + Qwen3-8B QLoRA 학습하기
+# Google Colab에서 데이터 수집 + Qwen3-14B QLoRA 학습하기
 
 데이터 수집과 LoRA 튜닝을 **모두 Google Colab Pro**에서 실행합니다.
 바로 실행 가능한 노트북: [`notebooks/auto_search_colab.ipynb`](../notebooks/auto_search_colab.ipynb)
 
 ## 권장 런타임
 
-QLoRA(4-bit) 기준:
+Qwen3-14B QLoRA(4-bit) 기준:
 
 | GPU | VRAM | 적합도 | 비고 |
 |-----|------|--------|------|
-| **A100 40GB** (Colab Pro) | 40GB | ✅ 여유 | 가장 빠름 |
-| **L4 24GB** (Colab Pro) | 24GB | ✅ 권장 (가성비) | bf16 사용 |
-| T4 16GB (무료) | 16GB | ⚠️ 가능하나 `--max-seq-len 1024 --batch-size 1` 필요 | bf16 미지원 → fp16 |
+| **A100 40GB** (Colab Pro) | 40GB | ✅ 권장 | 기본값(batch 2 / seq 2048) 그대로 |
+| L4 24GB (Colab Pro) | 24GB | ⚠️ 가능, `--batch-size 1` 권장 | bf16 사용 |
+| T4 16GB (무료) | 16GB | ⚠️ 빠듯, `--batch-size 1 --max-seq-len 1024` 필요 | bf16 미지원 → fp16 |
 
-`런타임 → 런타임 유형 변경`에서 GPU와 (Pro라면) L4/A100을 선택하세요.
+`런타임 → 런타임 유형 변경`에서 GPU(권장 A100)를 선택하세요.
 
 ## 핵심 개념: Colab은 휘발성 → Drive에 저장
 
@@ -27,7 +27,7 @@ Colab 런타임은 일정 시간 후 초기화됩니다. 그래서 노트북은:
 1. **GPU 확인** — `nvidia-smi`
 2. **Drive 마운트** — 저장 경로 `MyDrive/auto_search` 생성
 3. **코드/의존성** — 저장소 clone + `default-jre`(PDF 파싱) + `pip install -r requirements.txt`
-4. **Ollama 기동** — 수집 단계의 사양 추출/증강용 LLM(`qwen3:8b`)을 백그라운드 서빙
+4. **Ollama 기동** — 수집 단계의 사양 추출/증강용 LLM(`qwen3:14b`)을 백그라운드 서빙
    - 외부 API(DashScope 등)를 쓰면 이 단계 대신 `.env`의 `LLM_*`만 교체
 5. **시크릿** — Colab 보안 비밀(🔑)에 `MOUSER_API_KEY` 등록 → `.env` 자동 작성
 6. **데이터 수집** — `pipeline.build_catalog` → `parts_catalog.json`(Drive)
@@ -55,6 +55,6 @@ Colab 런타임은 일정 시간 후 초기화됩니다. 그래서 노트북은:
 
 ```python
 !python train/train_qlora.py --merge \
-    --output-dir "$DRIVE_ROOT/models/qwen3-8b-parts-lora"
-# → ...-merged (fp16/bf16 단일 모델, 약 16GB) 생성
+    --output-dir "$DRIVE_ROOT/models/qwen3-14b-parts-lora"
+# → ...-merged (fp16/bf16 단일 모델, 약 28GB) 생성
 ```

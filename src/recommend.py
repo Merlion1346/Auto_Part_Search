@@ -1,6 +1,6 @@
 """학습된 LoRA 어댑터로 부품을 추천한다.
 
-  python src/recommend.py --adapter models/qwen3-8b-parts-lora \
+  python src/recommend.py --adapter models/qwen3-14b-parts-lora \
       "5V를 3.3V로 변환하고 1A 이상 출력하는 LDO 추천해줘"
 """
 
@@ -50,7 +50,7 @@ def recommend(model, tokenizer, requirement: str) -> str:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--adapter", default="models/qwen3-8b-parts-lora")
+    ap.add_argument("--adapter", default="models/qwen3-14b-parts-lora")
     ap.add_argument("requirement", help="자연어 요구사항")
     args = ap.parse_args()
 
