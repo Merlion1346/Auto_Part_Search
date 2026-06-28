@@ -29,6 +29,23 @@ from ..config import cfg
 _client = None
 
 
+def _loads_first_json(s: str):
+    """LLM 응답에서 첫 JSON 객체만 관대하게 파싱.
+
+    json_object 강제에도 모델이 코드펜스/설명/두 번째 객체를 덧붙이는 경우가 있어
+    ('Extra data' 오류) 첫 '{' 부터 raw_decode 로 한 객체만 읽고 뒤는 무시한다."""
+    s = s.strip()
+    if s.startswith("```"):  # ```json ... ``` 코드펜스 제거
+        s = s.strip("`")
+        if s[:4].lower() == "json":
+            s = s[4:]
+    start = s.find("{")
+    if start == -1:
+        return json.loads(s)
+    obj, _ = json.JSONDecoder().raw_decode(s, start)
+    return obj
+
+
 def _get_client() -> OpenAI:
     global _client
     if _client is None:
@@ -97,7 +114,7 @@ def extract_specs(part: dict, datasheet_text: str) -> dict | None:
             response_format={"type": "json_object"},
         )
         content = resp.choices[0].message.content
-        return json.loads(content)
+        return _loads_first_json(content)
     except json.JSONDecodeError as e:
         print(f"[llm_extract] JSON 파싱 실패 ({part.get('part_name')}): {e}")
         return None

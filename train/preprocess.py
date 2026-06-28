@@ -102,6 +102,23 @@ def circuit_answer(circuit: dict) -> str:
 # --------------------------------------------------------------------------- #
 # LLM 기반 요구사항 증강 (paraphrase augmentation)
 # --------------------------------------------------------------------------- #
+def _loads_first_json(s: str):
+    """LLM 응답에서 첫 JSON 객체만 관대하게 파싱.
+
+    json_object 강제에도 모델이 코드펜스/설명/두 번째 객체를 덧붙이는 경우가 있어
+    ('Extra data' 오류) 첫 '{' 부터 raw_decode 로 한 객체만 읽고 뒤는 무시한다."""
+    s = s.strip()
+    if s.startswith("```"):  # ```json ... ``` 코드펜스 제거
+        s = s.strip("`")
+        if s[:4].lower() == "json":
+            s = s[4:]
+    start = s.find("{")
+    if start == -1:
+        return json.loads(s)
+    obj, _ = json.JSONDecoder().raw_decode(s, start)
+    return obj
+
+
 _llm_client = None
 
 
@@ -160,7 +177,7 @@ def llm_generate_requirements(part: dict, n: int) -> list[str]:
             temperature=0.9,  # 다양성 확보를 위해 높게
             response_format={"type": "json_object"},
         )
-        data = json.loads(resp.choices[0].message.content)
+        data = _loads_first_json(resp.choices[0].message.content)
         reqs = data.get("requirements", [])
         # 부품 이름 누출 방지 + 빈 문자열 제거
         name = part.get("part_name", "")
@@ -225,7 +242,7 @@ def llm_generate_circuit_requirements(circuit: dict, n: int) -> list[str]:
             temperature=0.9,
             response_format={"type": "json_object"},
         )
-        data = json.loads(resp.choices[0].message.content)
+        data = _loads_first_json(resp.choices[0].message.content)
         return [r.strip() for r in data.get("requirements", []) if r.strip()]
     except Exception as e:
         print(f"  [augment-circuit] 생성 실패: {e}")
